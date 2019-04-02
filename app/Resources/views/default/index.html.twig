@@ -1,0 +1,72 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-10 col-md-offset-1">
+            <div class="panel panel-success">
+                <div class="panel-heading">Cloud Key Web App</div>
+
+                {% if app.user != null %}
+                <table class="table">
+                    <tr>
+
+                        <th>Name </th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Expiry </th>
+                        <th>Serial Number</th>
+                        <th>Common Name</th>
+                        <th>Issuer</th>
+                    </tr>
+
+                    {% for array in certificates %}
+                        <tr>
+                            {% for value in array %}
+                                <td>{{ value }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </table>
+
+
+            </div>
+
+            <div class="form-group">
+                <div class="col-md-6 col-md-offset-0">
+                    <form action='' method='post'>
+                        <button type="submit" name="new" class="btn btn-primary">
+                            <i class="fa fa-btn"></i>New Certificate
+                        </button><br> <br>
+                        <button type="submit"  name="merge"class="btn btn-primary">
+                            <i class="fa fa-btn"></i>Merge
+                        </button><br> <br>
+                        <button type="submit" name="renew" class="btn btn-primary">
+                            <i class="fa fa-btn"></i>Renew
+                        </button><br> <br>
+
+                        <button type="submit" name="view" class="btn btn-primary">
+                            <i class="fa fa-btn"></i>View Detail
+                        </button><br> <br>
+                        <button type="submit" name="download" class="btn btn-primary">
+                            <i class="fa fa-btn"></i>Download
+                        </button><br> <br>
+                        <button type="submit" name="delete" class="btn btn-primary">
+                            <i class="fa fa-btn"></i>Delete
+                        </button><br> <br>
+
+                    </form>
+
+                </div>
+                {% endif %}
+
+
+                {% if app.user == null %}
+                    <a href="/login" class="btn btn-info">Login.. >></a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endblock %}
+
+

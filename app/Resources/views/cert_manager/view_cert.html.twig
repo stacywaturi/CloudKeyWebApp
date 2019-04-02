@@ -1,0 +1,76 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-10 col-md-offset-1">
+            <div class="panel panel-success">
+                <div class="panel-heading">View</div>
+
+                <tr>
+                    <th><b>Properties </b> </th><br>
+                </tr>
+
+                {% if app.user != null %}
+
+                {% for key, item in certificate %}
+                    <tr>
+                        <td><b>{{ key }} : </b></td><td>{{ item }}<br>
+
+                    </tr>
+                {% endfor %}
+                <br>
+                <tr>
+                    <th><b> Key Identifier</b>  </th><br>
+                    <td> <i>{{ key_id }}</i></td>
+                </tr>
+
+                <br>
+                <tr>
+                    <th><b> Certificate Identifier</b>  </th><br>
+                    <td> <i>{{ cert_id }}</i></td>
+                </tr>
+
+                <br>
+                <br>
+                <tr>
+
+            </div>
+
+            <div class="form-group">
+                <div class="col-md-6 col-md-offset-0">
+                    <form action='' method='post'>
+                        <button type="submit" name="download" class="btn btn-primary">
+                            <i class="fa fa-btn"></i>Download Public Key
+                        </button><br> <br>
+
+                        <button type="submit" name="download_csr" class="btn btn-primary">
+                            <i class="fa fa-btn"></i>Download CSR
+                        </button><br><br>
+                        <button type="submit" name="merge" class="btn btn-primary">
+                            <i class="fa fa-btn"></i>Merge Certificate
+                        </button><br> <br>
+                        <button type="submit" name="download_cer" class="btn btn-primary">
+                            <i class="fa fa-btn"></i>Download in CER format
+                        </button><br> <br>
+                        <button type="submit" name="download_pfx" class="btn btn-primary">
+                            <i class="fa fa-btn"></i>Download in PFX/PEM format
+                        </button><br> <br>
+                        <button type="submit" name="delete" class="btn btn-primary">
+                            <i class="fa fa-btn"></i>Delete
+                        </button><br> <br>
+                    </form>
+
+                </div>
+                {% endif %}
+
+
+                {% if app.user == null %}
+                    <a href="/login" class="btn btn-info">Login.. >></a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endblock %}
+
+

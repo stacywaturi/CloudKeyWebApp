@@ -1,0 +1,69 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-10 col-md-offset-1">
+            <div class="panel panel-success">
+                {% if app.user != null %}
+                <div class="panel-heading">Documents</div>
+
+
+                <table class="table">
+                    <tr>
+
+                        <th>Name </th>
+                        <th>Signature Blocks</th>
+                        <th>Signed Blocks</th>
+                        <th>Updated </th>
+
+                    </tr>
+
+                    {#{% for array in documents %}#}
+                        {#<tr>#}
+                            {#{% for value in array %}#}
+                                {#<td>{{ value }}</td>#}
+                            {#{% endfor %}#}
+                        {#</tr>#}
+                    {#{% endfor %}#}
+                </table>
+
+
+            </div>
+
+            <div class="form-group">
+                <div class="col-md-6 col-md-offset-0">
+                    <form action='' method='post'>
+                        <button type="submit" name="new" class="btn btn-primary">
+                            <i class="fa fa-btn"></i>New Document
+                        </button><br> <br>
+                        <button type="submit"  name="sign"class="btn btn-primary">
+                            <i class="fa fa-btn"></i>Sign
+                        </button><br> <br>
+                        <button type="submit" name="download" class="btn btn-primary">
+                            <i class="fa fa-btn"></i>Download
+                        </button><br> <br>
+
+                        <button type="submit" name="delete" class="btn btn-primary">
+                            <i class="fa fa-btn"></i>Delete
+                        </button><br> <br>
+
+
+                    </form>
+
+                </div>
+                {% endif %}
+
+
+                {% if app.user == null %}
+                     <div class="panel-heading">Welcome to the Cloud Key Web Application</div>
+                    <br>
+                    <a href="/login" class="btn btn-info">Login.. >></a>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+    {% endblock %}
+
+

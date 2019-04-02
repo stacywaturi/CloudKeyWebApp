@@ -1,0 +1,72 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-10 col-md-offset-1">
+            <div class="panel panel-success">
+                <div class="panel-heading">Signature Blocks</div>
+
+                {% if app.user != null %}
+                <table class="table">
+                    <tr>
+
+                        <th>Signer </th>
+                        <th>Block ID</th>
+                        <th>Signer email</th>
+                        <th>Role</th>
+                        <th>Prov ID</th>
+                        <th>Signed</th>
+
+                    </tr>
+
+                    {% for array in documents %}
+                        <tr>
+                            {% for value in array %}
+                                <td>{{ value }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </table>
+
+            </div>
+
+            <div class="form-group">
+
+
+                <div class="panel-body">
+                    {{ form_start(form) }}
+                    {#<div class="form_group">#}
+                    {#<div class="col-md-8 col-md-offset-2">#}
+                    {#{{ form_row(form.name, {'attr': {'class': 'form-control'}}) }}#}
+                    {#</div>#}
+                    {#</div>#}
+
+                    <div class="form_group">
+                        <div class="col-md-8 col-md-offset-2">
+
+                            {{ form_row(form.blocks, {'attr': {'class': 'form-control'}}) }}
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="col-md-8 col-md-offset-4" style="margin-top:5px;">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fa fa-btn"></i> Submit
+                            </button>
+                        </div>
+                    </div>
+                    {{ form_end(form) }}
+                </div>
+                {% endif %}
+
+
+                {% if app.user == null %}
+                    <a href="/login" class="btn btn-info">Login.. >></a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endblock %}
+
+
