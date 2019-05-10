@@ -88,9 +88,18 @@ class RegistrationController extends AbstractController
         }
         // tell the user data is incomplete
         else{
-            return new JsonResponse( array("message" => "Unable to create certificate. Data is incomplete. "),400);
+            return new JsonResponse( array("message" => "Unable to register user. Data is incomplete. "),400);
         }
 
     }
+
+    /**
+     * @Route("/change_password", methods={"POST"})
+     */
+    public function changePassword(Request $request, UserPasswordEncoderInterface $encoder)
+    {
+    }
+
+
 
 }

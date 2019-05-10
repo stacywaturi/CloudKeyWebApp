@@ -24,19 +24,8 @@ class LoginController extends Controller
      */
     public function loginAction(AuthenticationUtils $authenticationUtils){
 
-     // $authenticationUtils = $this->get('security.authentication_utils');
         $error = $authenticationUtils->getLastAuthenticationError();
         $last_Username = $authenticationUtils->getLastUsername();
-//
-//        var_dump($error);
-
-//        return $this->render(
-//            'auth/login.html.twig',
-//            array(
-//                'last_username' => $last_Username,
-//                'error' => $error
-//            )
-//        );
 
         if($error) {
             return new JsonResponse(array(
@@ -60,11 +49,7 @@ class LoginController extends Controller
     public function loginCheckAction()
     {
         return new JsonResponse( array("message" => "In Login_check"),400);
-//        return $this->render(
-//            'auth/login.html.twig',
-//            array(
-//                'last_username'
-//            );
+
     }
 
     /**

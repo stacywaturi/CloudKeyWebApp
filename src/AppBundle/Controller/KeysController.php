@@ -84,44 +84,40 @@ class KeysController extends AbstractController
 
         else {
             return new JsonResponse(array(
-                "error" => "Forbidden",
-                "message" =>"Unauthorized Request, please log in first",
+
+                "message" =>"Unauthorized Request",
 
             ), 401);
 
         }
 
-
-
     }
-
-
 
     /**
      *  @Route("/keys", methods={"GET"})
      */
     public function getKeys(Request $request)
     {
-        $id  = strval($request->get('id'));
+        if ($this->getUser()) {
+            $id = strval($request->get('id'));
 
-        //Check if id is queried
-        //If specific id is not queried (ie GET /keys?)
-        if(!$id){
-            //Check if user is logged in
-            if($this->getUser())
-            {
+            //Check if specific id is queried
+            //If specific id is not queried (ie GET /keys?)
+            if (!$id) {
+                //Check if user is logged in
+
                 $keys = $this->getDoctrine()
                     ->getRepository(Keys::class)
-                    ->findBy(array("user_id"=>$this->getUser()->getId()));
+                    ->findBy(array("user_id" => $this->getUser()->getId()));
 
-                if(!$keys) {
-                    return new JsonResponse(array( "error" => "Not Found",
+                if (!$keys) {
+                    return new JsonResponse(array(
                         "message" => 'No keys found'), 404);
                     // throw $this->createNotFoundException('No key found for id '. $id);
                 }
 
                 $response = array();
-                foreach ($keys as $key){
+                foreach ($keys as $key) {
                     $response[] = array(
                         'id' => $key->getId(),
                         'name' => $key->getName(),
@@ -131,48 +127,48 @@ class KeysController extends AbstractController
 
                 return new JsonResponse($response, 200);
 
+            } //If specific id is queried (GET /keys?id={123-123-123})
+            else {
+                $key = $this->getDoctrine()
+                    ->getRepository(Keys::class)
+                    ->findOneBy(array(
+                        'user_id' => $this->getUser()->getId(),
+                        'id' => $id));
+
+
+                if (!$key) {
+                    return new JsonResponse(array("error" => "Not Found",
+                        "message" => 'No key found for id: ' . $id), 404);
+                    // throw $this->createNotFoundException('No key found for id '. $id);
+                }
+
+                return new JsonResponse(array("name" => $key->getName(),
+                    "public_key" => array("modulus" => $key->getPublicKeyN(),
+                        "exponent" => $key->getPublicKeyE()),
+                    "key_operations" => json_decode($key->getKeyOperations()),
+                    "key_type" => $key->getkeyType(),
+                    "key_size" => $key->getKeySize(),
+                    "use" => $key->getUse(),
+                    "azure_key_id" => $key->getKeyId(),
+                    ),
+                    200);
+
+
             }
-            //If user is not logged in
-            else{
-                return new JsonResponse(array(
-                    "error" => "Forbidden",
-                    "message" =>"Unauthorized Request, please log in first",
 
-                ), 401);
-            }
+        } //If user is not logged in
+        else {
+            return new JsonResponse(array(
 
+                "message" => "Unauthorized Request, please log in first",
 
+            ), 401);
         }
-        //If specific id is queried (GET /keys?id={123-123-123})
-        else{
-            $key = $this->getDoctrine()
-                ->getRepository(Keys::class)
-                ->findOneBy(array(
-                    'user_id' => $this->getUser()->getId(),
-                    'id' => $id));
-
-
-            if(!$key) {
-                return new JsonResponse(array( "error" => "Not Found",
-                                                "message" => 'No key found for id: '. $id), 404);
-               // throw $this->createNotFoundException('No key found for id '. $id);
-            }
-
-            return new JsonResponse(array("name" => $key->getName(),
-                "public_key" => array("modulus" => $key->getPublicKeyN(),
-                                "exponent" => $key->getPublicKeyE()),
-                "key_operations" => json_decode($key->getKeyOperations()),
-                "key_type" => $key->getkeyType(),
-                "key_size" => $key->getKeySize(),
-                "use" => $key->getUse()),
-                200);
-
-        }
-
     }
 
 
-    /**
+
+/**
      *  @Route("/keys", methods={"DELETE"})
      */
     public function deleteKey(Request $request)
@@ -185,7 +181,7 @@ class KeysController extends AbstractController
             $key = $entityManager->getRepository(Keys::class)->find($id);
 
             if (!$key) {
-                return new JsonResponse(array("error" => "Not Found",
+                return new JsonResponse(array(
                     "message" => 'No key found for id: ' . $id), 404);
             }
 
@@ -211,6 +207,7 @@ class KeysController extends AbstractController
                     }
 
                     return new JsonResponse(array("message" => $previous->getMessage()), 500);
+
                 }
 
             }
@@ -228,8 +225,7 @@ class KeysController extends AbstractController
     {
         $headers = array('Content-Type' => 'application/json');
 
-        $response = Unirest\Request::post("http://localhost:5000/cloud_key/api/keys", $headers, $query);
-
+        $response = Unirest\Request::post($this->getParameter('baseURL')."/keys", $headers, $query);
         $response_code = $response->code;
         $response_body = json_decode($response->raw_body, true);
         return array("code"=>$response_code, "body"=>$response_body);
@@ -240,7 +236,7 @@ class KeysController extends AbstractController
     {
         $headers = array('Content-Type' => 'application/json');
 
-        $response = Unirest\Request::delete("http://localhost:5000/cloud_key/api/keys?id=".$query, $headers);
+        $response = Unirest\Request::delete($this->getParameter('baseURL')."/keys?id=".$query, $headers);
         $response_code = $response->code;
         $response_body = json_decode($response->raw_body, true);
 
