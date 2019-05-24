@@ -35,7 +35,12 @@
         "ext-openssl":"*",
         "ext-gmp":"*",
         "ext-json":"*",
-        "sopsy/base64url-php": "^1.1"
+        "sopsy/base64url-php": "^1.1",
+        "knplabs/knp-paginator-bundle": "^3.0",
+        "andreas-glaser/doctrine-rql": "^0.2.1",
+        "isolv/rql-parser": "^0.0.2"
+
+
     },
     "require-dev": {
 
@@ -67,5 +72,21 @@
         "branch-alias": {
             "dev-master": "3.4-dev"
         }
-    }
+    },
+
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://packagist.isolvtech.com/",
+            "options":  {
+                "ssl": {
+                    "verify_peer": true,
+                    "cafile": "c:/satis/cacert.pem"
+                }
+            }
+        }
+    ]
+
+
+
 }

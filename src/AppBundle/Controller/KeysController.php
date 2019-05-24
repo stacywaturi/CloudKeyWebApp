@@ -9,8 +9,20 @@
 
 namespace AppBundle\Controller;
 
+use AndreasGlaser\DoctrineRql\Factory\ORMVisitorFactory;
+use AppBundle\Entity\Certificates;
+use AndreasGlaser\DoctrineRql\Fixtures;
+use AndreasGlaser\DoctrineRql\Helper;
+use AndreasGlaser\DoctrineRql\Visitor\ORMVisitor;
+use Doctrine\Common\DataFixtures;
+use Doctrine\DBAL\DriverManager;
+use Doctrine\ORM;
+use Doctrine\ORM\EntityManager;
 use AppBundle\Entity\User;
 use AppBundle\Form\MergeCertificate;
+
+use Isolv\Rql\Parser\Parser;
+use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Tests\Compiler\K;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -24,6 +36,8 @@ use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\HttpFoundation\Response;
 use AppBundle\Entity\Keys;
 
+
+
 use Unirest;
 
 
@@ -34,7 +48,6 @@ class KeysController extends AbstractController
      */
     public function createKey(Request $request)
     {
-
 
         $data  = json_decode($request->getContent(), true);
 
@@ -47,6 +60,7 @@ class KeysController extends AbstractController
             if($response['code'] == 201) {
 
                 $key = new Keys();
+
                 $key->setName($response['body']['data']['name']);
                 $key->setUserId($this->getUser()->getId());
                 $key->setUse($response['body']['data']['use']);
@@ -57,6 +71,7 @@ class KeysController extends AbstractController
                 $key->setKeyType($response['body']['data']['key_type']);
                 $key->setKeySize($response['body']['data']['key_size']);
 
+
                 try {
                     $em = $this->getDoctrine()->getManager();
                     $em->persist($key);
@@ -64,21 +79,26 @@ class KeysController extends AbstractController
 
                     return new JsonResponse(array("message" => "Key created successfully "), 201);
 
-
                 } catch (\Doctrine\DBAL\DBALException $e) {
                     $previous = $e->getPrevious();
                     $errorCode = $previous->getCode();
                     if ($previous instanceof \Doctrine\DBAL\Driver\Mysqli\MysqliException) {
                         // $errorCode contains MySQL error code (ex: 1062 for a duplicate entry)
+                        // $error     contains MySQL error code
                         $errorCode = $previous->getCode();
                     }
 
                     return new JsonResponse(array("message" => $previous->getMessage()), 500);
 
+
                 }
             }
             else
                 return new JsonResponse($response['body'], $response['code']);
+
+
+
+
 
         }
 
@@ -104,11 +124,22 @@ class KeysController extends AbstractController
             //Check if specific id is queried
             //If specific id is not queried (ie GET /keys?)
             if (!$id) {
-                //Check if user is logged in
 
-                $keys = $this->getDoctrine()
-                    ->getRepository(Keys::class)
-                    ->findBy(array("user_id" => $this->getUser()->getId()));
+                $rqlAppendString = strval($request->get('rql'));
+
+                if(!$rqlAppendString){
+                    // Default for get all keys: sort by date
+                    $rqlString = "sort(-keys.created_at)";
+
+                }
+
+                $rqlString =  "sort(-keys.created_at)&".$rqlAppendString;
+
+;
+                var_dump($rqlString);
+
+                $keys = $this->rqlQuery($rqlString);
+
 
                 if (!$keys) {
                     return new JsonResponse(array(
@@ -116,18 +147,22 @@ class KeysController extends AbstractController
                     // throw $this->createNotFoundException('No key found for id '. $id);
                 }
 
+                //Extract relevant key details
                 $response = array();
                 foreach ($keys as $key) {
                     $response[] = array(
                         'id' => $key->getId(),
                         'name' => $key->getName(),
-                        'created_at' => $key->getCreatedAt()
+                        'created_at' => $key->getCreatedAt()->format('Y-m-d\TH:i:sP'),
+
                     );
                 }
 
                 return new JsonResponse($response, 200);
 
-            } //If specific id is queried (GET /keys?id={123-123-123})
+            }
+
+            // If specific id is queried (GET /keys?id={123-123-123})
             else {
                 $key = $this->getDoctrine()
                     ->getRepository(Keys::class)
@@ -142,16 +177,34 @@ class KeysController extends AbstractController
                     // throw $this->createNotFoundException('No key found for id '. $id);
                 }
 
+
+                //Get certificates corresponding to the ID given
+                $cert_ids = array();
+                $certs = $this->getDoctrine()
+                    ->getRepository(Certificates::class)
+                    ->findBy(array("user_id" => $this->getUser()->getId(),
+                        "key_id" => $id ));
+
+
+
+                foreach ($certs as $cert) {
+                    $cert_ids[]= $cert->getId();
+
+                }
+
+
+
                 return new JsonResponse(array("name" => $key->getName(),
-                    "public_key" => array("modulus" => $key->getPublicKeyN(),
-                        "exponent" => $key->getPublicKeyE()),
-                    "key_operations" => json_decode($key->getKeyOperations()),
-                    "key_type" => $key->getkeyType(),
-                    "key_size" => $key->getKeySize(),
-                    "use" => $key->getUse(),
-                    "azure_key_id" => $key->getKeyId(),
-                    ),
-                    200);
+                                            "public_key" => array("modulus" => $key->getPublicKeyN(),
+                                            "exponent" => $key->getPublicKeyE()),
+                                            "key_operations" => json_decode($key->getKeyOperations()),
+                                            "key_type" => $key->getkeyType(),
+                                            "key_size" => $key->getKeySize(),
+                                            "use" => $key->getUse(),
+                                            "azure_key_id" => $key->getKeyId(),
+                                            "certificate_ids"=>$cert_ids,
+                ),
+                200);
 
 
             }
@@ -221,6 +274,33 @@ class KeysController extends AbstractController
 
 
 
+    public function rqlQuery($rqlString)
+    {
+        $em = $this->getDoctrine()->getManager();
+        $qb = $em->createQueryBuilder();
+//
+        $qb->select('keys')
+            ->from('AppBundle\Entity\Keys', 'keys');
+
+//
+//                ORMVisitorFactory::appendFiltersOnly($qb, $rqlString,false);
+
+        //Using Isolv's RQL parser
+        $visitor = new ORMVisitor();
+        $rqlObject = Parser::parse($rqlString);
+        $visitor->append($qb, $rqlObject, false);
+
+        $keys = new Keys();
+        //var_dump($qb->getQuery()->getSQL());
+        $keys = $qb->getQuery()->execute();
+
+        //    var_dump($keys);
+
+
+        return $keys;
+
+    }
+
     public function postRequest($query)
     {
         $headers = array('Content-Type' => 'application/json');
@@ -239,7 +319,6 @@ class KeysController extends AbstractController
         $response = Unirest\Request::delete($this->getParameter('baseURL')."/keys?id=".$query, $headers);
         $response_code = $response->code;
         $response_body = json_decode($response->raw_body, true);
-
         return array("code"=>$response_code, "body"=>$response_body);
 
 

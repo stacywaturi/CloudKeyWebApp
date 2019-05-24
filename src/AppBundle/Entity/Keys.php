@@ -71,8 +71,6 @@ class Keys
     protected $key_size;
 
 
-
-
     /**
      * @ORM\Column(type="datetime",columnDefinition="TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
      */
@@ -238,6 +236,7 @@ class Keys
     {
         return $this->created_at;
     }
+
 
     /**
      * @return mixed

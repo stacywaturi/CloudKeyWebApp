@@ -2,21 +2,21 @@
 
 namespace App\Repository;
 
-use App\Entity\Certificates;
+use App\Entity\Subscriptions;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
 /**
- * @method Certificates|null find($id, $lockMode = null, $lockVersion = null)
- * @method Certificates|null findOneBy(array $criteria, array $orderBy = null)
- * @method Certificates[]    findAll()
- * @method Certificates[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
+ * @method Subscriptions|null find($id, $lockMode = null, $lockVersion = null)
+ * @method Subscriptions|null findOneBy(array $criteria, array $orderBy = null)
+ * @method Subscriptions[]    findAll()
+ * @method Subscriptions[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
-class CertificatesRepository extends ServiceEntityRepository
+class SubscriptionsRepository extends ServiceEntityRepository
 {
     public function __construct(RegistryInterface $registry)
     {
-        parent::__construct($registry, Certificates::class);
+        parent::__construct($registry, Subscriptions::class);
     }
 
 
@@ -24,7 +24,7 @@ class CertificatesRepository extends ServiceEntityRepository
 
 
     // /**
-    //  * @return Certificates[] Returns an array of Certificates objects
+    //  * @return Subscriptions[] Returns an array of Subscriptions objects
     //  */
     /*
     public function findByExampleField($value)
@@ -41,7 +41,7 @@ class CertificatesRepository extends ServiceEntityRepository
     */
 
     /*
-    public function findOneBySomeField($value): ?Certificates
+    public function findOneBySomeField($value): ?Subscriptions
     {
         return $this->createQueryBuilder('c')
             ->andWhere('c.exampleField = :val')
