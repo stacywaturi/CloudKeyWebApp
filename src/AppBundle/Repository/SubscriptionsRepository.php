@@ -20,9 +20,6 @@ class SubscriptionsRepository extends ServiceEntityRepository
     }
 
 
-
-
-
     // /**
     //  * @return Subscriptions[] Returns an array of Subscriptions objects
     //  */

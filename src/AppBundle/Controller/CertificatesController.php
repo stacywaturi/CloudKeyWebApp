@@ -27,9 +27,10 @@ use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Security\Core\Security;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\HttpFoundation\Response;
+use Isolv\Rql\Parser\Parser;
+use AndreasGlaser\DoctrineRql\Visitor\ORMVisitor;
 
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-
 
 use Sop\CryptoEncoding\PEM;
 use Sop\CryptoTypes\AlgorithmIdentifier\Hash\SHA256AlgorithmIdentifier;
@@ -68,11 +69,8 @@ class CertificatesController extends AbstractController
 
                 ]);
 
-
-
             if($getKeyResponse->getStatusCode()==200)
             {
-
                 $key = json_decode($getKeyResponse->getContent(), true);
 
 
@@ -80,54 +78,33 @@ class CertificatesController extends AbstractController
                 $binary_n = Base64Url::decode($key['public_key']['modulus']);
                 $binary_e = Base64Url::decode($key['public_key']['exponent']);
 
-//
-//                echo "\n KEY EXPONENT BINARY: \n";
-//                var_dump(($binary_e));
-//                echo "\n KEY MODULUS BINARY: \n";
-//                var_dump(($binary_n));
-//
-//                echo "\n KEY EXPONENT BASE 64: \n";
-//                var_dump(base64_encode($binary_e));
-//
-//                echo "\n KEY MODULUS BASE 64: \n";
-//                var_dump(base64_encode($binary_n));
-
-
                 $subject = $data['subject'];
 
                 //Compile Certificate Request Information to be signed
                 $genCSResponse =  $this->generateCSR($binary_n, $binary_e, $subject);
 
                 $key_version_id = $key['azure_key_id'];
+
                 //Sign the Certificate Information
                 //Generate the Request body for the cloud sign request
                 $query = array("id" => $key_version_id, "algorithm" => $genCSResponse['hashValue']['algorithm'], "hash" => Base64Url::encode($genCSResponse['hashValue']['hash']));
-//                 var_dump($query);
+
                 $response = $this->postRequest(json_encode($query));
 
                 // If successfully signed ..
                 if($response['code'] == 201) {
                     // Construct PKCS#10 object. The signature algorithm identifier specified here *must* match the signing algorithm that cloudKey was directed to use
-                    $signature = GenericSignature::fromSignatureData( Base64Url::decode($response['body']['Signature']), $genCSResponse["algo"]);
-//                   var_dump($genCSResponse["cri"]);
-//                    var_dump($genCSResponse["algo"]);
-//                    var_dump($signature);
-//                    var_dump($response['body']['Signature']);
-//                    var_dump($this->base64url_decode($response['body']['Signature']));
+                    $signature = GenericSignature::fromSignatureData(Base64Url::decode($response['body']['Signature']), $genCSResponse["algo"]);
 
                     $csr = new CertificationRequest($genCSResponse["cri"], $genCSResponse["algo"], $signature) ;
                    //echo $csr;
 
                     $pemCSR = $csr->toPEM()->string();
 
-                    file_put_contents('c:\Users\Stacy\Desktop\Cloud Key\certificates\cert0429.csr', $pemCSR);
-
                     //Save CSR in DB
-
                     $certs = new Certificates();
 
                     $certs->setName($data['name']);
-                    $certs->
                     $certs->setUserId($this->getUser()->getId());
                     $certs->setKeyId($data['key_id']);
                     $certs->setCsr($pemCSR);
@@ -151,11 +128,6 @@ class CertificatesController extends AbstractController
                         return new JsonResponse(array("message" => $previous->getMessage()), 500);
 
                     }
-
-
-
-
-
                 }
 
                 else{
@@ -165,13 +137,9 @@ class CertificatesController extends AbstractController
 
             }
 
-            else{
-
+            else {
                 return new JsonResponse(json_decode($getKeyResponse->getContent()), 404);
             }
-
-
-
 
         }
 
@@ -197,18 +165,28 @@ class CertificatesController extends AbstractController
 
             //Check if specific id is queried
             //If specific id is not queried (ie GET /certs?)
+
             if(!$id) {
 
+                $rqlAppendString = strval($request->get('rql'));
+                $rqlDefault = "sort(-certs.created_at)&eq(certs.user_id,".$this->getUser()->getId().")";
 
+                if(!$rqlAppendString){
+                    // Default for get all keys: sort by created at date
+                    $rqlString = $rqlDefault;
+                }
 
-                $certs = $this->getDoctrine()
-                    ->getRepository(Certificates::class)
-                    ->findBy(array("user_id" => $this->getUser()->getId()));
+                else
+                //Execute RQL query + Default: sort by created at date
+                    $rqlString =  $rqlDefault.$rqlAppendString;
+                    $certs   = $this->rqlQuery($rqlString);
+
                 if (!$certs) {
                     return new JsonResponse(array(
                         "message" => 'No certificates found'), 404);
 
                 }
+
 
 
                 $response = array();
@@ -222,11 +200,7 @@ class CertificatesController extends AbstractController
                         'issuer_name' => $cert->getIssuer(),
                         'serial_number' => $cert->getSerialNumber(),
                         'key_id' => $cert->getKeyId(),
-
-
                     );
-
-
                 }
                 return new JsonResponse($response, 200);
             }
@@ -246,6 +220,7 @@ class CertificatesController extends AbstractController
                     // throw $this->createNotFoundException('No key found for id '. $id);
                 }
                 return new JsonResponse(array(
+                    'id' => $cert->getId(),
                     'friendly_cert_name' => $cert->getName(),
                     'created_at' => $cert->getCreatedAt(),
                     'expiry' => $cert->getExpiry(),
@@ -284,7 +259,6 @@ class CertificatesController extends AbstractController
             $data = json_decode($request->getContent(),true);
             $id = $data['certificate_id'];
             $cert = $data['certificate'];
-
             $getCertResponse = $this->forward('AppBundle\Controller\CertificatesController::getCert',
                 [
                     'id' => $data['certificate_id']
@@ -296,6 +270,8 @@ class CertificatesController extends AbstractController
             if($getCertResponse->getStatusCode() == 200){
 
                 $cert_details = (json_decode( $getCertResponse->getContent(), true));
+
+//                var_dump($cert_details);
 
                 $key_id = $cert_details['key_id'];
                 $getKeyResponse = $this->forward('AppBundle\Controller\KeysController::getKeys',
@@ -310,85 +286,68 @@ class CertificatesController extends AbstractController
                     $table_key_n = $key['public_key']['modulus'];
                     $table_key_e = $key['public_key']['exponent'];
 
+
 //                   var_dump($table_key_n);
 //                   var_dump($table_key_e);
 
                     // Get Public Key Information from the specified Certificate String
                     $resource = openssl_pkey_get_public($cert);
-//       var_dump($resource);
+//                    var_dump($resource);
 
                     if ($resource) {
                         $array = openssl_pkey_get_details($resource);
                         $key_n = Base64Url::encode($array["rsa"]["n"]);
                         $key_e = Base64Url::encode($array["rsa"]["e"]);
 
-//            var_dump($array);
-//            var_dump($base64_n);
-//            var_dump($base64_e);
-                    }
 
-                    if($table_key_n == $key_n && $table_key_e == $key_e ){
+                        if($table_key_n == $key_n && $table_key_e == $key_e ){
+                            // After validation of public key info,
+                            // Get the certificate attributes
+                            $cert_attributes = openssl_x509_parse($cert);
+                            $expiry = $cert_attributes['validTo_time_t'];
+                            $common_name = $cert_attributes['subject']['CN'];
+                            $serial_number = $cert_attributes['serialNumber'];
+                            $issuer = $cert_attributes['issuer']['O'];
 
-                        // After validation of public key info,
-                        // Get the certificate attributes
-                        $cert_attributes = openssl_x509_parse($cert);
-
-
-                        $expiry = $cert_attributes['validTo_time_t'];
-                        $common_name = $cert_attributes['subject']['CN'];
-                        $serial_number = $cert_attributes['serialNumber'];
-                        $issuer = $cert_attributes['issuer']['O'];
-
-                        //Update certificate and attributes in table
-
-                        try {
-                            $em = $this->getDoctrine()->getManager();
-                            $certs = $em->getRepository(Certificates::class) ->findOneBy(array(
-                                'user_id'=> $this->getUser()->getId(),
-                                'id' => $id
-                            ));
+                            //Update certificate and attributes in table
+                            try {
+                                $em = $this->getDoctrine()->getManager();
+                                $certs = $em->getRepository(Certificates::class) ->findOneBy(array(
+                                    'user_id'=> $this->getUser()->getId(),
+                                    'id' => $id
+                                ));
 
 
-                            $certs->setCertificate($cert);
-                            $certs->setExpiry($expiry);
-                            $certs->setCommonName($common_name);
-                            $certs->setSerialNumber($serial_number);
-                            $certs->setIssuer($issuer);
+                                $certs->setCertificate($cert);
+                                $certs->setExpiry($expiry);
+                                $certs->setCommonName($common_name);
+                                $certs->setSerialNumber($serial_number);
+                                $certs->setIssuer($issuer);
 
-                            $em->flush();
+                                $em->flush();
 
-                            return new JsonResponse(array(
-                                "message" => "Certificate successfully merged",
-                            ), 200);
-
-
-                        } catch (\Doctrine\DBAL\DBALException $e) {
-                            $previous = $e->getPrevious();
-                            $errorCode = $previous->getCode();
-                            if ($previous instanceof \Doctrine\DBAL\Driver\Mysqli\MysqliException) {
-                                // $errorCode contains MySQL error code (ex: 1062 for a duplicate entry)
+                                return new JsonResponse(array(
+                                    "message" => "Certificate successfully merged",
+                                ), 200);
 
 
+                            } catch (\Doctrine\DBAL\DBALException $e) {
+                                $previous = $e->getPrevious();
                                 $errorCode = $previous->getCode();
+                                if ($previous instanceof \Doctrine\DBAL\Driver\Mysqli\MysqliException) {
+                                    // $errorCode contains MySQL error code (ex: 1062 for a duplicate entry)
+                                    $errorCode = $previous->getCode();
+                                }
+
+                                return new JsonResponse(array("message" => $previous->getMessage()), 500);
                             }
-
-                            return new JsonResponse(array("message" => $previous->getMessage()), 500);
-
-
                         }
-
                     }
-
-                    else{
-                        return new JsonResponse(array("message" => "Invalid Certificate", 400));
-
-                    }
-
                 }
 
+                return new JsonResponse(array("message" => "Invalid Certificate"),  400);
+
             }
-
-
 
             else{
                 return new JsonResponse(array(
@@ -397,11 +356,6 @@ class CertificatesController extends AbstractController
 
                 ), 404);
             }
-
-
-            var_dump($getCertResponse->getStatusCode());
-
-
 
         }
 
@@ -421,20 +375,34 @@ class CertificatesController extends AbstractController
      */
     public function getCSR(Request $request, $id)
     {
-        $cert = $this->getDoctrine()
-            ->getRepository(Certificates::class)
-            ->findOneBy(array(
-                'user_id'=> $this->getUser()->getId(),
-                'id' => $id
-            ));
+        if($this->getUser()){
 
-        if (!$cert) {
-            return new JsonResponse(array("error" => "Not Found",
-                "message" => 'No certificate found for id: ' . $id), 404);
-            // throw $this->createNotFoundException('No key found for id '. $id);
+            $cert = $this->getDoctrine()
+                ->getRepository(Certificates::class)
+                ->findOneBy(array(
+                    'user_id'=> $this->getUser()->getId(),
+                    'id' => $id
+                ));
+
+            if (!$cert) {
+                return new JsonResponse(array("error" => "Not Found",
+                    "message" => 'No certificate found for id: ' . $id), 404);
+                // throw $this->createNotFoundException('No key found for id '. $id);
+            }
+
+            return new JsonResponse(array("CSR" => $cert->getCsr()), 200);
+
         }
 
-        return new JsonResponse(array("CSR" => $cert->getCsr()), 200);
+        else {
+            return new JsonResponse(array(
+
+                "message" => "Unauthorized Request, please log in first",
+
+            ), 401);
+        }
+
+
     }
 
 
@@ -443,20 +411,32 @@ class CertificatesController extends AbstractController
      */
     public function downloadCert(Request $request, $id)
     {
-        $cert = $this->getDoctrine()
-            ->getRepository(Certificates::class)
-            ->findOneBy(array(
-                'user_id'=> $this->getUser()->getId(),
-                'id' => $id
-            ));
+        if($this->getUser()){
+            $cert = $this->getDoctrine()
+                ->getRepository(Certificates::class)
+                ->findOneBy(array(
+                    'user_id'=> $this->getUser()->getId(),
+                    'id' => $id
+                ));
 
-        if (!$cert) {
-            return new JsonResponse(array("error" => "Not Found",
-                "message" => 'No certificate found for id: ' . $id), 404);
-            // throw $this->createNotFoundException('No key found for id '. $id);
+            if (!$cert) {
+                return new JsonResponse(array("error" => "Not Found",
+                    "message" => 'No certificate found for id: ' . $id), 404);
+                // throw $this->createNotFoundException('No key found for id '. $id);
+            }
+
+            return new JsonResponse(array("Certificate" => $cert->getCertificate()), 200);
+
         }
 
-        return new JsonResponse(array("Certificate" => $cert->getCertificate()), 200);
+
+        else {
+            return new JsonResponse(array(
+
+                "message" => "Unauthorized Request, please log in first",
+
+            ), 401);
+        }
     }
 
 
@@ -480,7 +460,6 @@ class CertificatesController extends AbstractController
 
 
             $data = (string)$cert->getKeyId();
-
             $response = $this->deleteRequest(json_encode($data));
 
             if ($response['code'] == 200) {
@@ -512,10 +491,6 @@ class CertificatesController extends AbstractController
         }
 
     }
-
-
-
-
 
 
 
@@ -652,15 +627,32 @@ class CertificatesController extends AbstractController
         return array("hashValue" => $hashValue, "algo"=>$algo, "cri"=> $cri);
 
     }
+    public function rqlQuery($rqlString)
+    {
+        $em = $this->getDoctrine()->getManager();
+        $qb = $em->createQueryBuilder();
+//
+        $qb->select('certs')
+            ->from('AppBundle\Entity\Certificates', 'certs');
+
+
+
+        //Using Isolv's RQL parser
+        $visitor = new ORMVisitor();
+        $rqlObject = Parser::parse($rqlString);
+        $visitor->append($qb, $rqlObject, false);
+
+        $certs = new Certificates();
+
+        $certs = $qb->getQuery()->execute();
+
+
+
+
+        return $certs;
+
+    }
 
 
 }
 
-//    //load Private Key from PEM
-    function base64_url_encode( $data ) {
-        return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
-    }
-
-//    function base64url_decode($data) {
-//        return base64_decode(str_pad(strtr($data, '-_', '+/'), strlen($data) % 4, '=', STR_PAD_RIGHT));
-//    }

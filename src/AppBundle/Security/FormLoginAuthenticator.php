@@ -31,6 +31,7 @@ class FormLoginAuthenticator extends AbstractFormLoginAuthenticator
      * FormLoginAuthenticator constructor.
      * @param RouterInterface $router
      * @param UserPasswordEncoderInterface $encoder
+     *
      */
     public function __construct(RouterInterface $router, UserPasswordEncoderInterface $encoder)
     {

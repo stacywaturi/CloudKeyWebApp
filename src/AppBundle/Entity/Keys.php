@@ -75,7 +75,19 @@ class Keys
      * @ORM\Column(type="datetime",columnDefinition="TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
      */
     protected $created_at;
+    /**
+     * @ORM\Column(type="string",length=255)
+     */
+    protected $subscription_id;
 
+
+    /**
+     * @param mixed $subscription_id
+     */
+    public function setSubscriptionId($subscription_id): void
+    {
+        $this->subscription_id = $subscription_id;
+    }
 
     /**
      * @param mixed $name
@@ -284,6 +296,14 @@ class Keys
     public function getPublicKeyN()
     {
         return $this->public_key_n;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getSubscriptionId()
+    {
+        return $this->subscription_id;
     }
 
 }

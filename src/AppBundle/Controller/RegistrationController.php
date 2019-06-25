@@ -45,14 +45,13 @@ class RegistrationController extends AbstractController
             else
                 return new JsonResponse( array("message" => "Password and Confirm Password do not match "),400);
 
-
             //Encode the password
             //$encoder = $this->get('security.password_encoder');
             $password = $encoder->encodePassword($user, $user->getPlainPassword());
             $user->setPassword($password);
 
-            //Set the role
-            $user->setRole('ROLE_USER');
+            //Set the role ('ROLE_ADMIN, 'ROLE_USER')
+            $user->setRole('ROLE_ADMIN');
 
             //Save to DB
             try {
@@ -64,12 +63,14 @@ class RegistrationController extends AbstractController
 
 
 
+
             } catch (\Doctrine\DBAL\DBALException $e) {
                 $previous = $e->getPrevious();
                 $errorCode = $previous->getCode();
                 if ($previous instanceof \Doctrine\DBAL\Driver\Mysqli\MysqliException) {
                     // $errorCode contains MySQL error code (ex: 1062 for a duplicate entry)
                     $errorCode = $previous->getCode();
+
                 }
 
 
@@ -82,8 +83,6 @@ class RegistrationController extends AbstractController
 
                 }
             }
-
-
 
         }
         // tell the user data is incomplete
@@ -98,8 +97,7 @@ class RegistrationController extends AbstractController
      */
     public function changePassword(Request $request, UserPasswordEncoderInterface $encoder)
     {
+
     }
-
-
 
 }

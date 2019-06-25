@@ -124,6 +124,9 @@ class User implements UserInterface
     }
 
 
+
+
+
     /**
      * Set the name for User
      */
@@ -142,7 +145,7 @@ class User implements UserInterface
 
 
     /**
-     * Set the email for User
+     * Set the email for the User
      */
     public function setEmail($email)
     {
@@ -223,4 +226,5 @@ class User implements UserInterface
     {
         return null;
     }
+
 }

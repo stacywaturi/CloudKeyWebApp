@@ -28,37 +28,37 @@ class Subscriptions
     protected $id;
 
     /**
-     * @ORM\Column(type="string",length=255)
+     * @ORM\Column(name="`name`",type="string",length=255)
      */
     protected $name;
 
     /**
-     * @ORM\Column(type="string",length=255)
+     * @ORM\Column(name="`user_id`",type="string",length=255)
      */
     protected $user_id;
 
     /**
-     * @ORM\Column(type="string",length=255)
+     * @ORM\Column(name="`status",type="string",length=255)
      */
     protected $status;
 
     /**
-     * @ORM\Column(type="string",length=255)
+     * @ORM\Column(name="`product_id`",type="string",length=255)
      */
-    protected $product;
+    protected $product_id;
 
     /**
-     * @ORM\Column(type="int",length=255)
+     * @ORM\Column(name="`usage`",type="text")
      */
     protected $usage;
 
     /**
-     * @ORM\Column(type="datetime",columnDefinition="TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+     * @ORM\Column(name="`created_at`",type="datetime",columnDefinition="TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
      */
     protected $created_at;
 
     /**
-     * @ORM\Column(type="datetime",columnDefinition="TIMESTAMP")
+     * @ORM\Column(name="`expiry`",type="datetime",columnDefinition="TIMESTAMP")
      */
     protected $expiry;
 
@@ -97,9 +97,9 @@ class Subscriptions
     /**
      * @return mixed
      */
-    public function getProduct()
+    public function getProductId()
     {
-        return $this->product;
+        return $this->product_id;
     }
 
     /**
@@ -158,13 +158,12 @@ class Subscriptions
     }
 
     /**
-     * @param mixed $product
+     * @param mixed $product_id
      */
-    public function setProduct($product): void
+    public function setProductId($product_id): void
     {
-        $this->product = $product;
+        $this->product_id = $product_id;
     }
-
     /**
      * @param mixed $status
      */
